@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head> 
+    <meta charset=utf-8 /> 
+    <title>Castello-GreatChallengeA-ProportionalSymbolMap</title> 
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" integrity="sha256-kLaT2GOSpHechhsozzB+flnD+zUyjE2LlfWPgU04xyI=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js" integrity="sha256-WBkoXOwTeyKclOHuWtc+i2uENFpDZ9YPdf5Hf+D7ewM=" crossorigin=""></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: whitesmoke;
+            font-family: Lato, sans-serif;
+            color: #0D0000;
+        }
+        header {
+            padding: 6px 10%;
+        }
+        h1 {
+            display: inline-block;
+            margin-right: 20px;
+            color: #001323;
+        }
+        h2 {
+            display: inline-block;
+            color: #001323;
+        }
+        #map {
+            width: 80%;
+            height: 540px;
+            margin: 10px auto;
+            border: 1px solid black
+        }
+        footer {
+            padding: 6px 10%;
+            width: 80%;
+        }
+        p {
+            font-size: 1em;
+            color: #001323;
+        }
+        .legend {
+            border: 1px solid black;
+            padding: 5px;
+            background: whitesmoke;
+        }
+        .circle {
+            height: 10px;
+            width: 10px;
+            background-color: #bbb;
+            border-radius: 50%;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>COVID-19 Deaths by Country</h1><h2>As of Feb 12, 2022</h2>
+    </header>
+
+    <div id='map'></div>
+
+    <footer>
+        <!-- f) It should have your name and the source -->
+        <p>Map authored by Olivia</p>
+        <!-- If you really want to you can convert other Covid Data into geojson form -->
+        <p>Data sources:
+            <ul><li><a href="https://covid19.who.int/data" target="new">WHO Coronavirus (COVID-19) Dashboard</a> official daily counts: 
+            <a href="https://covid19.who.int/WHO-COVID-19-global-data.csv" target="new">Daily cases and deaths by date reported</a>
+            </li><li>Country latitudes and longitudes from 
+                <a href="https://developers.google.com/public-data/docs/canonical/countries_csv" target="new">Google Dataset Publishing Language</a>
+            </li></ul>
+        </p>
+    </footer>
+
+    <script src="WHO-COVID-19-global-table-data.js"></script>
+    <script>
+
+        var map = L.map('map', {
+            center: [20,0],
+            zoom: 2,
+        });
+      
+        var tiles = L.tileLayer('http://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+            subdomains: 'abcd',
+            maxZoom: 19
+        });    
+        tiles.addTo(map);
+
+        // e) You should have some kind of legend that shows the user what the color upon hover means 
+        var legend = L.control({position: 'topright'});
+        var labels = ['<strong>COVID-19 Deaths</strong>'];
+        var categories = ['> 500,000','100,000 - 500,000','10,000 - 100,000','< 10,000'];
+        var colors = ['red','DarkOrange','gold','BurlyWood']
+        var defaultColor = 'black'
+        legend.onAdd = function (map) {
+            var div = L.DomUtil.create('div', 'legend');
+
+            for (var i = 0; i < categories.length; i++) {
+                    div.innerHTML += 
+                    labels.push(
+                       '<span class="circle" style="background:' + colors[i] + '"></span> ' +
+                    (categories[i] ? categories[i] : '+'));
+                }
+                div.innerHTML = labels.join('<br>');
+            return div;
+        };
+        legend.addTo(map);
+
+        // a) map deaths - the size of the circles should be based on deaths and properly sized to include all other data in a visually appealing way
+        L.geoJson(countries, {
+            pointToLayer: function(feature,latlng) {
+                console.log(feature.properties)
+                return L.circleMarker(latlng, {
+                    color: defaultColor,
+                    weight: 2,
+                    // HTML color names https://www.w3schools.com/colors/colors_names.asp
+                    fillColor: defaultColor,
+                    fillOpacity: .5,
+                    radius: getRadius(feature.properties.Deaths_cumulative_total)
+                });   
+            },
+         
+            onEachFeature : function(feature,layer) {
+                layer.on('mouseover', function() {
+                    // b) This should be a proportional symbol map that... has 3 categories
+                    if (deaths > 500000) {
+                        layer.setStyle({ fillColor: colors[0], color: colors[0] });
+                    } else if (deaths <= 500000 && deaths > 100000) {
+                        layer.setStyle({ fillColor: colors[1],color: colors[1] });
+                    } else if (deaths <= 100000 && deaths > 10000) {
+                        layer.setStyle({ fillColor: colors[2],color: colors[2],radius:8 });
+                    } else if (deaths <= 10000) {
+                        layer.setStyle({ fillColor: colors[3],color: colors[3],radius:8 });
+                    }
+                });
+
+                // c) It should turn back to that neutral color on mouseoff 
+                layer.on('mouseout', function() {
+                    layer.setStyle({ fillColor:defaultColor,color:defaultColor,
+                        radius:getRadius(feature.properties.Deaths_cumulative_total)
+                    });
+                });
+
+                var name = feature.properties.google_name
+                var deaths = feature.properties.Deaths_cumulative_total;
+            
+                // d) The popup or tool tip should have the name of the country and the number of deaths 
+                var popup = ("<strong>"+name+"</strong><br/>"
+                    +(Math.round(deaths)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")+"<br/><br/>"
+                )
+                layer.bindPopup(popup)
+            }
+
+        }).addTo(map);
+
+        function getRadius(area){
+            var radius = Math.sqrt(area/Math.PI);
+            // return radius *.6   
+            return (radius == 0) ? 5:radius *.05
+        }
+          
+    </script>
+</body>
+</html>
