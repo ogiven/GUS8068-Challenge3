@@ -1,0 +1,48 @@
+<html>
+  <head>
+    <!--Load the AJAX API-->
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+
+    <!--Load data on 5 largest US cities-->
+    <script type="text/javascript" src="5uscities.json"></script>
+    
+    <script type="text/javascript">
+
+      // Load the Visualization API and the corechart package.
+      google.charts.load('current', {'packages':['corechart']});
+
+      // Set a callback to run when the Google Visualization API is loaded.
+      google.charts.setOnLoadCallback(drawChart);
+
+      var myCities = JSON.parse(cities);
+
+      function drawChart() {
+
+        // Create the data table.
+        var data = new google.visualization.DataTable();
+        data.addColumn('string', 'Name');
+        data.addColumn('number', 'Population');
+
+        for(var i = 0; i < myCities.length; i++) { 
+            data.addRows([
+                [myCities[i].name,parseInt(myCities[i].population)]
+            ]);
+        }
+        // Set chart options
+        var options = {'title':'Populations of 5 Largest US Cities',
+                       'width':400,
+                       'height':300};
+
+        // Instantiate and draw our chart, passing in some options.
+        // var chart = new google.visualization.PieChart(document.getElementById('chart_div'));
+        var chart = new google.visualization.BarChart(document.getElementById('chart_div'));
+        chart.draw(data, options);
+      }
+    </script>
+  </head>
+
+  <body>
+    <!--Div that will hold the chart-->
+    <div id="chart_div"></div>
+  </body>
+</html>
